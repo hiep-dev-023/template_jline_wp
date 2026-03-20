@@ -1,0 +1,52 @@
+name: Deploy To FTP Server
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-${{ github.repository }}
+  cancel-in-progress: false
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 📥 Kéo Source Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 🔍 Đọc cấu hình Deploy
+        id: config
+        run: |
+          SERVER_NAME=$(jq -r '.server' deploy-config.json | tr 'a-z' 'A-Z')
+          HAS_BUILD=$(jq -r '.has_build_step // false' deploy-config.json)
+          BUILD_CMD=$(jq -r '.build_command // "npm run build"' deploy-config.json)
+          echo "SERVER_NAME=$SERVER_NAME" >> $GITHUB_ENV
+          echo "HAS_BUILD=$HAS_BUILD" >> $GITHUB_ENV
+          echo "BUILD_CMD=$BUILD_CMD" >> $GITHUB_ENV
+
+      - name: ⚙️ Cài đặt Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: 📦 Cài đặt dependencies dự án (nếu cần build)
+        if: env.HAS_BUILD == 'true'
+        run: npm ci
+
+      - name: 🔨 Build dự án
+        if: env.HAS_BUILD == 'true'
+        run: ${{ env.BUILD_CMD }}
+
+      - name: 📦 Cài đặt thư viện deploy
+        run: npm install --no-save basic-ftp apache-crypt
+
+      - name: 🚀 Chạy Script Deploy
+        run: node .github/scripts/deploy.cjs
+        env:
+          GITHUB_REPO: ${{ github.repository }}
+          SERVER_SECRET_JSON: ${{ secrets[format('{0}_CONFIG', env.SERVER_NAME)] }}

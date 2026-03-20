@@ -1,0 +1,35 @@
+{
+  "name": "template_jline_wp",
+  "version": "1.0.0",
+  "description": "WordPress build boilerplate optimized for Laragon",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "start": "node scripts/build.js --watch",
+    "build": "node scripts/build.js",
+    "wp:download": "node scripts/download-wp.js",
+    "link": "node scripts/link.js",
+    "clean": "node scripts/clean.js"
+  },
+  "keywords": [
+    "wordpress",
+    "laragon",
+    "theme",
+    "scss",
+    "webp"
+  ],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "adm-zip": "^0.5.10",
+    "autoprefixer": "^10.4.19",
+    "browser-sync": "^3.0.2",
+    "chokidar": "^3.6.0",
+    "cssnano": "^7.0.1",
+    "dotenv": "^17.3.1",
+    "postcss": "^8.4.38",
+    "postcss-sort-media-queries": "^5.2.0",
+    "sass-embedded": "^1.77.2",
+    "sharp": "^0.33.4"
+  }
+}

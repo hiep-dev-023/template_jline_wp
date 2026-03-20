@@ -1,0 +1,29 @@
+{
+  "version": 3,
+  "settings": {
+    "spacing": {
+      "padding": true,
+      "margin": true,
+      "blockGap": true
+    },
+     "typography": {
+      "fontFamilies": [
+        {
+          "fontFamily": "\"Noto Sans JP\", sans-serif",
+          "slug": "font-noto",
+          "name": "Noto Sans JP"
+        },
+        {
+          "fontFamily": "\"Shippori Mincho\", serif",
+          "slug": "font-shippori",
+          "name": "Shippori Mincho"
+        }
+      ]
+    }
+  },
+  "styles": {
+    "color": {
+      "text": "var(--base)"
+    }
+  }
+}

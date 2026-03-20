@@ -1,0 +1,6 @@
+node_modules
+public
+latest-ja.zip
+.wp_temp
+.env
+.repo_lock
