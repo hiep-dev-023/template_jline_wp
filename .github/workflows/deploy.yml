@@ -33,10 +33,19 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
+          cache: 'npm'
 
       - name: 📦 Cài đặt dependencies dự án (nếu cần build)
         if: env.HAS_BUILD == 'true'
         run: npm ci
+
+      # Cache WordPress download để tránh lỗi 429 (rate limit)
+      - name: 💾 Cache WordPress download
+        if: env.HAS_BUILD == 'true'
+        uses: actions/cache@v4
+        with:
+          path: public
+          key: wp-public-${{ hashFiles('scripts/download-wp.js') }}
 
       - name: 🔨 Build dự án
         if: env.HAS_BUILD == 'true'

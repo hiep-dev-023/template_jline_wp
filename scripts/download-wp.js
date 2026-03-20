@@ -24,26 +24,46 @@ function ensureDir(dir) {
     }
 }
 
-async function downloadFile(url, dest) {
+function downloadOnce(url, dest) {
     return new Promise((resolve, reject) => {
         const file = createWriteStream(dest);
         get(url, (response) => {
             if (response.statusCode === 301 || response.statusCode === 302) {
-                // handle redirection
-                return downloadFile(response.headers.location, dest).then(resolve).catch(reject);
+                file.close();
+                return downloadOnce(response.headers.location, dest).then(resolve).catch(reject);
             }
             if (response.statusCode !== 200) {
-                return reject(new Error(`Failed to get '${url}' (${response.statusCode})`));
+                file.close();
+                try { unlinkSync(dest); } catch { /* ignore */ }
+                return reject(new Error(`HTTP ${response.statusCode}`));
             }
             response.pipe(file);
             file.on('finish', () => {
                 file.close(resolve);
             });
         }).on('error', (err) => {
-            unlinkSync(dest);
+            file.close();
+            try { unlinkSync(dest); } catch { /* ignore */ }
             reject(err);
         });
     });
+}
+
+async function downloadFile(url, dest, maxRetries = 3) {
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        try {
+            await downloadOnce(url, dest);
+            return;
+        } catch (err) {
+            const isRetryable = err.message.includes('429') || err.message.includes('503');
+            if (!isRetryable || attempt === maxRetries) {
+                throw new Error(`Failed to get '${url}' (${err.message}) after ${attempt} attempt(s)`);
+            }
+            const delay = attempt * 5;
+            console.log(`   ⚠️ Lần ${attempt} thất bại (${err.message}). Thử lại sau ${delay}s...`);
+            await new Promise(r => setTimeout(r, delay * 1000));
+        }
+    }
 }
 
 async function main() {
