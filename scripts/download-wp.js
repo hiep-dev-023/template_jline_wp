@@ -26,8 +26,18 @@ function ensureDir(dir) {
 
 function downloadOnce(url, dest) {
     return new Promise((resolve, reject) => {
+        const options = {
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (WordPress Theme Builder CI)',
+                'Accept': '*/*',
+            },
+        };
+        const parsedUrl = new URL(url);
+        options.hostname = parsedUrl.hostname;
+        options.path = parsedUrl.pathname + parsedUrl.search;
+
         const file = createWriteStream(dest);
-        get(url, (response) => {
+        get(options, (response) => {
             if (response.statusCode === 301 || response.statusCode === 302) {
                 file.close();
                 return downloadOnce(response.headers.location, dest).then(resolve).catch(reject);
