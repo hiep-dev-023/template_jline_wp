@@ -94,20 +94,13 @@ async function connectWithRetry(client, serverInfo, maxRetries = 3) {
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
         try {
             console.log(`🔗 Đang kết nối FTP (lần ${attempt}/${maxRetries})...`);
-            // Thử FTPS trước (mã hóa), fallback sang FTP thường
-            const secureMode = attempt <= Math.ceil(maxRetries / 2) ? 'implicit' : false;
-            if (secureMode) {
-                console.log('   🔒 Thử kết nối FTPS (mã hóa)...');
-            } else {
-                console.log('   ⚠️ Fallback sang FTP thường (không mã hóa)...');
-            }
             await client.access({
                 host: serverInfo.host,
                 user: serverInfo.user,
                 password: serverInfo.pass,
-                secure: secureMode,
+                secure: false,
             });
-            console.log(`✅ Kết nối FTP thành công: ${serverInfo.host} (${secureMode ? 'FTPS' : 'FTP'})`);
+            console.log(`✅ Kết nối FTP thành công: ${serverInfo.host}`);
             return;
         } catch (err) {
             console.error(`⚠️ Lần ${attempt} thất bại: ${err.message}`);
@@ -366,7 +359,7 @@ async function runDeploy() {
                 await client.cd(ftpRoot);
                 await client.downloadTo('/tmp/.last_deploy_sha', `${targetDir}/.last_deploy_sha`);
                 const lastSha = fs.readFileSync('/tmp/.last_deploy_sha', 'utf8').trim();
-                if (lastSha && lastSha.length >= 7) {
+                if (lastSha && /^[0-9a-f]{7,40}$/.test(lastSha)) {
                     lastDeployRef = lastSha;
                     console.log(`📌 So sánh với deploy trước: ${lastSha.substring(0, 7)}`);
                 }
@@ -530,17 +523,16 @@ async function runDeploy() {
                     const themeLocalDir = path.join(config.source_folder, 'wp-content', 'themes', themeName);
                     await uploadDirectory(client, themeLocalDir, themeRemoteDir, ftpRoot);
                     console.log('✅ Hoàn thành!');
-                    return;
+                } else {
+                    // Diff trên src/ — so sánh từ lần deploy trước
+                    diffOutput = execSync(`git diff --name-status ${lastDeployRef} HEAD -- src/`).toString().trim();
                 }
-                // Diff trên src/ — so sánh từ lần deploy trước
-                diffOutput = execSync(`git diff --name-status ${lastDeployRef} HEAD -- src/`).toString().trim();
             } catch (gitErr) {
                 console.error(`⚠️ Git diff lỗi: ${gitErr.message}`);
                 console.log('ℹ️ Fallback: Upload toàn bộ theme...');
                 const themeLocalDir = path.join(config.source_folder, 'wp-content', 'themes', themeName);
                 await uploadDirectory(client, themeLocalDir, themeRemoteDir, ftpRoot);
                 console.log('✅ Hoàn thành!');
-                return;
             }
 
             if (!diffOutput) {
