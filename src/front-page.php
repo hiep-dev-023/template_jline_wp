@@ -5,7 +5,6 @@ get_header();
     <div class="p-top__inner">
         <img src="<?php echo get_template_directory_uri(); ?>/assets/images/common/img_dummy.webp" alt="">
     </div>
-    
 </main>
 <?php
 get_footer();
