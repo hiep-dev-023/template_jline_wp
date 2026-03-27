@@ -94,13 +94,20 @@ async function connectWithRetry(client, serverInfo, maxRetries = 3) {
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
         try {
             console.log(`🔗 Đang kết nối FTP (lần ${attempt}/${maxRetries})...`);
+            // Thử FTPS trước (mã hóa), fallback sang FTP thường
+            const secureMode = attempt <= Math.ceil(maxRetries / 2) ? 'implicit' : false;
+            if (secureMode) {
+                console.log('   🔒 Thử kết nối FTPS (mã hóa)...');
+            } else {
+                console.log('   ⚠️ Fallback sang FTP thường (không mã hóa)...');
+            }
             await client.access({
                 host: serverInfo.host,
                 user: serverInfo.user,
                 password: serverInfo.pass,
-                secure: false,
+                secure: secureMode,
             });
-            console.log(`✅ Kết nối FTP thành công: ${serverInfo.host}`);
+            console.log(`✅ Kết nối FTP thành công: ${serverInfo.host} (${secureMode ? 'FTPS' : 'FTP'})`);
             return;
         } catch (err) {
             console.error(`⚠️ Lần ${attempt} thất bại: ${err.message}`);
@@ -126,6 +133,7 @@ const WP_PROTECTED_PATTERNS = [
     '.htaccess',
     '.htpasswd',
     '.repo_lock',
+    '.last_deploy_sha',
 ];
 
 /**
@@ -350,6 +358,24 @@ async function runDeploy() {
         }
 
         // ════════════════════════════════════════
+        // Lấy SHA commit đã deploy lần trước (từ server)
+        // ════════════════════════════════════════
+        let lastDeployRef = 'HEAD~1'; // fallback mặc định
+        if (!isFirstDeploy) {
+            try {
+                await client.cd(ftpRoot);
+                await client.downloadTo('/tmp/.last_deploy_sha', `${targetDir}/.last_deploy_sha`);
+                const lastSha = fs.readFileSync('/tmp/.last_deploy_sha', 'utf8').trim();
+                if (lastSha && lastSha.length >= 7) {
+                    lastDeployRef = lastSha;
+                    console.log(`📌 So sánh với deploy trước: ${lastSha.substring(0, 7)}`);
+                }
+            } catch {
+                console.log('📌 Không tìm thấy lịch sử deploy → so sánh HEAD~1');
+            }
+        }
+
+        // ════════════════════════════════════════
         // CHẾ ĐỘ 1: DEPLOY LẦN ĐẦU TIÊN
         // Upload toàn bộ WP core + theme
         // ════════════════════════════════════════
@@ -418,7 +444,6 @@ async function runDeploy() {
 
             await client.cd(ftpRoot);
 
-            // Kiểm tra đủ commit để diff
             let diffOutput = '';
             try {
                 const commitCount = execSync('git rev-list --count HEAD').toString().trim();
@@ -429,8 +454,8 @@ async function runDeploy() {
                     console.log('✅ Hoàn thành!');
                     return;
                 }
-                // Diff trên src/ (source code, không phải output)
-                diffOutput = execSync('git diff --name-status HEAD~1 HEAD -- src/').toString().trim();
+                // Diff trên src/ — so sánh từ lần deploy trước
+                diffOutput = execSync(`git diff --name-status ${lastDeployRef} HEAD -- src/`).toString().trim();
             } catch (gitErr) {
                 console.error(`⚠️ Git diff lỗi: ${gitErr.message}`);
                 console.log('ℹ️ Fallback: Upload toàn bộ theme...');
@@ -444,7 +469,7 @@ async function runDeploy() {
                 console.log('ℹ️ Không có thay đổi trong src/ — kiểm tra file khác...');
 
                 // Kiểm tra nếu thay đổi ở deploy-config, scripts, etc.
-                const otherDiff = execSync('git diff --name-status HEAD~1 HEAD').toString().trim();
+                const otherDiff = execSync(`git diff --name-status ${lastDeployRef} HEAD`).toString().trim();
                 if (!otherDiff) {
                     console.log('ℹ️ Không có thay đổi nào.');
                     return;
@@ -506,6 +531,17 @@ async function runDeploy() {
             console.log('');
             console.log(`📊 Kết quả: ${uploadCount} upload, ${deleteCount} xóa, ${skipCount} bảo vệ.`);
             console.log('✅ Hoàn thành Cập nhật Theme!');
+        }
+
+        // Lưu commit SHA hiện tại lên server (để lần deploy sau so sánh chính xác)
+        try {
+            const currentSha = execSync('git rev-parse HEAD').toString().trim();
+            fs.writeFileSync('/tmp/.last_deploy_sha', currentSha);
+            await client.cd(ftpRoot);
+            await client.uploadFrom('/tmp/.last_deploy_sha', `${targetDir}/.last_deploy_sha`);
+            console.log(`📌 Đã lưu deploy marker: ${currentSha.substring(0, 7)}`);
+        } catch {
+            console.log('⚠️ Không thể lưu deploy marker (không ảnh hưởng deploy).');
         }
     } catch (error) {
         console.error('');
