@@ -394,12 +394,12 @@ async function runDeploy() {
             // 2. Upload .htpasswd (đã tạo ở trên)
             await client.uploadFrom('/tmp/.htpasswd', `${targetDir}/.htpasswd`);
 
-            // 3. Upload WP + Theme (ZIP + SSH Extract)
+            // 3. Upload WP + Theme (ZIP + PHP Extract)
             console.log('🚀 Upload ZIP + Giải nén trên server...');
 
             // 3a. Zip public/
             console.log('📦 Đang nén thư mục...');
-            execSync(`cd ${config.source_folder} && zip -r /tmp/_deploy.zip . -x ".*"`, { stdio: 'pipe' });
+            execSync(`cd "${config.source_folder}" && zip -r /tmp/_deploy.zip . -x ".*"`, { stdio: 'pipe' });
             const zipSize = (fs.statSync('/tmp/_deploy.zip').size / 1024 / 1024).toFixed(1);
             console.log(`   📦 File zip: ${zipSize}MB`);
 
@@ -408,27 +408,64 @@ async function runDeploy() {
             await client.uploadFrom('/tmp/_deploy.zip', `${targetDir}/_deploy.zip`);
             console.log('   ✅ Upload zip hoàn tất!');
 
-            // 3c. SSH vào server để giải nén và xóa zip
-            const extractPath = `${serverInfo.root_path}/${config.project_dir}`;
-            const sshHost = serverInfo.ssh_host || serverInfo.host;
-            const sshPort = serverInfo.ssh_port || 22;
-            const sshUser = serverInfo.ssh_user || serverInfo.user;
-            const sshPass = serverInfo.ssh_pass || serverInfo.pass;
+            // 3c. Tạo PHP extract script (có secret token bảo vệ)
+            const crypto = require('crypto');
+            const token = crypto.randomBytes(32).toString('hex');
+            const extractPhp = [
+                '<?php',
+                'error_reporting(0);',
+                `if (($_GET["t"] ?? "") !== "${token}") { http_response_code(403); die("Forbidden"); }`,
+                '$zip = new ZipArchive;',
+                'if ($zip->open("_deploy.zip") === TRUE) {',
+                '    $zip->extractTo("./");',
+                '    $zip->close();',
+                '    @unlink("_deploy.zip");',
+                '    @unlink(__FILE__);',
+                '    echo "OK";',
+                '} else {',
+                '    @unlink("_deploy.zip");',
+                '    @unlink(__FILE__);',
+                '    echo "FAIL";',
+                '}',
+            ].join('\n');
+            fs.writeFileSync('/tmp/_extract.php', extractPhp);
+            await client.uploadFrom('/tmp/_extract.php', `${targetDir}/_extract.php`);
 
-            console.log(`🔧 SSH giải nén: ${sshHost}:${sshPort}`);
-            console.log(`   📂 Đường dẫn: ${extractPath}`);
+            // 3d. Tính URL từ root_path (tự động, không cần cấu hình thêm)
+            let siteUrl = serverInfo.site_url || '';
+            if (!siteUrl) {
+                // Trích đường dẫn web từ root_path (phần sau public_html)
+                const rootPath = serverInfo.root_path || '';
+                const pubIdx = rootPath.indexOf('public_html');
+                const webPath = pubIdx >= 0 ? rootPath.substring(pubIdx + 'public_html'.length) : '';
+                siteUrl = `https://${serverInfo.host}${webPath}`;
+            }
+            const extractUrl = `${siteUrl.replace(/\/$/, '')}/${config.project_dir}/_extract.php?t=${token}`;
+            console.log(`🔧 Gọi extract: ${siteUrl}/${config.project_dir}/_extract.php`);
 
+            // 3e. Gọi HTTP để giải nén
+            const httpModule = require(extractUrl.startsWith('https') ? 'https' : 'http');
             try {
-                execSync(
-                    `sshpass -e ssh -o StrictHostKeyChecking=no -p ${sshPort} ${sshUser}@${sshHost} ` +
-                    `'cd ${extractPath} && unzip -o _deploy.zip && rm -f _deploy.zip'`,
-                    { stdio: 'inherit', timeout: 120000, env: { ...process.env, SSHPASS: sshPass } }
-                );
-                console.log('✅ Giải nén thành công! Zip đã xóa.');
-            } catch (sshErr) {
-                console.error(`⚠️ SSH giải nén lỗi: ${sshErr.message}`);
-                console.log('↩️ Fallback: Xóa zip + Upload từng file...');
+                const extractResult = await new Promise((resolve, reject) => {
+                    const req = httpModule.get(extractUrl, { timeout: 120000, rejectUnauthorized: false }, (res) => {
+                        let data = '';
+                        res.on('data', chunk => data += chunk);
+                        res.on('end', () => resolve({ status: res.statusCode, body: data.trim() }));
+                    });
+                    req.on('error', reject);
+                    req.on('timeout', () => { req.destroy(); reject(new Error('Timeout (120s)')); });
+                });
+
+                if (extractResult.body === 'OK') {
+                    console.log('✅ Giải nén thành công! (zip + script đã tự xóa)');
+                } else {
+                    throw new Error(`Server trả về: ${extractResult.status} - ${extractResult.body}`);
+                }
+            } catch (extractErr) {
+                console.error(`⚠️ Extract lỗi: ${extractErr.message}`);
+                console.log('↩️ Fallback: Xóa zip/script + Upload từng file...');
                 try { await client.remove(`${targetDir}/_deploy.zip`); } catch {}
+                try { await client.remove(`${targetDir}/_extract.php`); } catch {}
                 await uploadDirectory(client, config.source_folder, targetDir, ftpRoot);
             }
 

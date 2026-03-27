@@ -52,9 +52,7 @@ jobs:
         run: ${{ env.BUILD_CMD }}
 
       - name: 📦 Cài đặt thư viện deploy
-        run: |
-          sudo apt-get update -qq && sudo apt-get install -y -qq sshpass
-          npm install --no-save basic-ftp apache-crypt
+        run: npm install --no-save basic-ftp apache-crypt
 
       - name: 🚀 Chạy Script Deploy
         run: node .github/scripts/deploy.cjs
