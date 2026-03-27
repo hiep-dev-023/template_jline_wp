@@ -114,15 +114,22 @@ async function main() {
         const innerWpDir = join(tempExtractDir, 'wordpress');
         
         if (existsSync(innerWpDir)) {
-             // We can use fs-extra or simple rename since public might be empty
-             // Since node renameSync across partitions might fail, we assume same drive here.
-             // But for safety let's just copy/move everything.
              const fs = await import('fs');
              const entries = fs.readdirSync(innerWpDir);
              for(let entry of entries) {
                  const srcPath = join(innerWpDir, entry);
                  const destPath = join(PUBLIC_DIR, entry);
-                 fs.renameSync(srcPath, destPath);
+                 try {
+                     // Thử rename trước (nhanh nhất, cùng partition)
+                     fs.renameSync(srcPath, destPath);
+                 } catch {
+                     // Fallback: copy + delete (cross-partition safe, ví dụ Linux tmpfs)
+                     if (fs.statSync(srcPath).isDirectory()) {
+                         fs.cpSync(srcPath, destPath, { recursive: true });
+                     } else {
+                         fs.copyFileSync(srcPath, destPath);
+                     }
+                 }
              }
         }
         

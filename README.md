@@ -1,192 +1,614 @@
-# WordPress Theme Boilerplate (Laragon + Symlink)
+# WordPress Theme Boilerplate
 
-[日本語 (Japanese)](#日本語-japanese) | [English](#english) | [Tiếng Việt (Vietnamese)](#tiếng-việt-vietnamese)
+Hệ thống phát triển WordPress Theme tối ưu, hỗ trợ SCSS, WebP tự động, BrowserSync live-reload, và CI/CD deploy qua FTP.
 
 ---
 
-## 日本語 (Japanese)
+## 📋 Mục Lục
 
-Laragonに最適化された、高速なWordPressテーマ開発用ボイラープレートです。ソースコードは `src/` 内に記述され、自動的にビルド・同期されます。
+- [Yêu Cầu Hệ Thống](#-yêu-cầu-hệ-thống)
+- [Cấu Trúc Thư Mục](#-cấu-trúc-thư-mục)
+- [Thiết Lập Nhanh](#-thiết-lập-nhanh)
+- [Cấu Hình Theo Hệ Điều Hành](#-cấu-hình-theo-hệ-điều-hành)
+  - [Windows + Laragon](#windows--laragon-khuyến-nghị)
+  - [Windows + XAMPP](#windows--xampp)
+  - [macOS + MAMP](#macos--mamp)
+  - [macOS + Laravel Valet](#macos--laravel-valet)
+  - [Linux + Apache](#linux--apache)
+- [Hướng Dẫn Phát Triển](#-hướng-dẫn-phát-triển)
+- [Build System Chi Tiết](#-build-system-chi-tiết)
+- [Lệnh CLI](#-lệnh-cli)
+- [CI/CD Deploy Qua FTP](#-cicd-deploy-qua-ftp)
+- [FAQ & Xử Lý Lỗi](#-faq--xử-lý-lỗi)
 
-### セットアップ手順
+---
 
-1. **パッケージのインストール**
-   ```bash
-   npm install
-   ```
+## 🔧 Yêu Cầu Hệ Thống
 
-2. **WordPress (日本語版) のダウンロード**
-   ```bash
-   npm run wp:download
-   ```
-   *※特定のバージョンを指定したい場合：* `npm run wp:download -- --version=6.4.3`
+| Phần mềm | Phiên bản tối thiểu | Kiểm tra |
+|-----------|---------------------|----------|
+| Node.js | 18+ (khuyến nghị 20+) | `node -v` |
+| npm | 9+ | `npm -v` |
+| Git | 2.30+ | `git --version` |
+| Local Server | Laragon / XAMPP / MAMP / Valet | — |
 
-3. **環境変数 (.env) の設定**
-   `.env.example` ファイルをコピーして `.env` を作成します。
-   ```bash
-   cp .env.example .env
-   ```
-   `.env` ファイルを開き、Laragonの `www` フォルダパスを設定してください。
-   ```env
-   LARAGON_WWW=C:\laragon\www
-   ```
+**Cài đặt Node.js:**
+- Windows/macOS: [nodejs.org](https://nodejs.org/) → tải bản LTS
+- Linux: `sudo apt install nodejs npm` (Ubuntu) hoặc `sudo dnf install nodejs npm` (Fedora)
 
-4. **Laragonのシンボリックリンク作成**
-   ```bash
-   npm run link
-   ```
-   このコマンドは、設定された `LARAGON_WWW` 内に現在のプロジェクトと同名のシンボリックリンクを作成し、`public/` フォルダを指すようにします。すでに存在する場合は自動的に上書きされます。
-   *(※管理者権限のプロンプトが表示される場合があります)*
+---
 
-5. **開発開始**
-   ```bash
-   npm start
-   ```
-   ソースファイル (`src/`) を監視し、SCSSのコンパイル、画像のWebP変換、PHPファイルのコピーを行います。BrowserSyncが起動し、`http://[プロジェクト名].test` のプロキシサーバーとして http://localhost:3000 が開かれます。
+## 📁 Cấu Trúc Thư Mục
 
-### フォルダ構成
-```text
-[プロジェクト名]/
-├── src/                     ← 開発用ソースコード
-│   ├── *.php                ← テンプレートファイル
-│   └── assets/              ← SCSS, JS, 画像ファイルなど
-├── public/                  ← WordPress本体 + デプロイされるテーマ
-├── scripts/                 ← ビルドやリンク用のカスタムスクリプト
-├── .env                     ← Laragonパスなどのローカル設定
-└── package.json
 ```
-
-### コマンド一覧
-| コマンド | 説明 |
-|-------|-------|
-| `npm start` | 開発サーバーと全ファイル(PHP, SCSS, JS, Images)の監視 |
-| `npm run build` | プロダクション用ビルド（監視なし） |
-| `npm run wp:download` | 最新(または指定バージョン)のWordPress JAをダウンロード |
-| `npm run link` | Laragonの www → `public/` へのシンボリックリンク作成 |
-| `npm run clean` | 出力されたテーマを削除 (WP本体は保持) |
-
----
-
-## English
-
-A high-speed WordPress theme development boilerplate optimized for Laragon with automatic symlinking. All source code is written inside `src/` and automatically built to `public/`.
-
-### Setup Instructions
-
-1. **Install Dependencies**
-   ```bash
-   npm install
-   ```
-
-2. **Download WordPress (Japanese Edition)**
-   ```bash
-   npm run wp:download
-   ```
-   *※ To specify a version:* `npm run wp:download -- --version=6.4.3`
-
-3. **Set Up Environment Variables (.env)**
-   Copy the `.env.example` file to `.env`:
-   ```bash
-   cp .env.example .env
-   ```
-   Open the `.env` file and configure your Laragon `www` path:
-   ```env
-   LARAGON_WWW=C:\laragon\www
-   ```
-
-4. **Create Laragon Symlink**
-   ```bash
-   npm run link
-   ```
-   This command creates a symlink in your `LARAGON_WWW` directory pointing to the `public/` folder. It will automatically replace an existing folder/symlink if one exists.
-   *(※ A UAC Admin prompt may appear on Windows)*
-
-5. **Start Development**
-   ```bash
-   npm start
-   ```
-   Watches the `src/` folder for changes, compiles SCSS, converts images to WebP, and synchronizes PHP files. BrowserSync will launch at http://localhost:3000, proxying `http://[project-name].test`.
-
-### Directory Structure
-```text
 [project_name]/
-├── src/                     ← YOUR SOURCE CODE
-│   ├── *.php                ← PHP templates
-│   └── assets/              ← SCSS, JS, Vendor, Images
-├── public/                  ← Installed WordPress Core + Output Theme
-├── scripts/                 ← Build & Utilities scripts
-├── .env                     ← Local environment configuration
+├── src/                          ← 💻 Source code (bạn code ở đây)
+│   ├── *.php                     ← PHP template files
+│   ├── style.css                 ← Theme metadata (tên, mô tả)
+│   ├── theme.json                ← Block theme settings
+│   ├── includes/                 ← PHP includes (functions, hooks)
+│   └── assets/
+│       ├── scss/                 ← SCSS → auto compile → CSS
+│       │   ├── common.scss       ← Entry file → common.css
+│       │   ├── top.scss          ← Entry file → top.css
+│       │   ├── global/           ← Variables, mixins, functions
+│       │   ├── foundation/       ← Reset, base styles
+│       │   ├── component/        ← UI components
+│       │   ├── layout/           ← Layout components
+│       │   ├── page/             ← Page-specific styles
+│       │   └── utilities/        ← Utility classes
+│       ├── js/                   ← JavaScript files (copy trực tiếp)
+│       ├── images/               ← JPG/PNG → auto convert → WebP
+│       └── vendor/               ← Thư viện bên thứ 3 (jQuery, AOS...)
+│
+├── public/                       ← 🌐 WordPress core + Theme build output
+│   ├── wp-admin/                 ← WP core (download-wp.js tạo)
+│   ├── wp-includes/              ← WP core
+│   ├── wp-config.php             ← DB config (tạo thủ công)
+│   └── wp-content/themes/
+│       └── [project_name]/       ← ✅ Theme đã build (build.js tạo)
+│
+├── scripts/                      ← Build scripts
+│   ├── build.js                  ← SCSS compile, WebP convert, file copy
+│   ├── download-wp.js            ← WordPress downloader
+│   ├── link.js                   ← Symlink creator
+│   └── clean.js                  ← Clean build output
+│
+├── .github/                      ← CI/CD
+│   ├── workflows/deploy.yml      ← GitHub Actions workflow
+│   └── scripts/deploy.cjs        ← FTP deploy script
+│
+├── deploy-config.json            ← Deploy configuration
+├── .env                          ← Local environment (không commit)
+├── .env.example                  ← Environment template
 └── package.json
 ```
 
-### Available Commands
-| Command | Description |
-|-------|-------|
-| `npm start` | Dev server + File watcher (PHP, SCSS, JS, Images) |
-| `npm run build` | One-off production build |
-| `npm run wp:download` | Download latest (or specific) WordPress JA |
-| `npm run link` | Symlink Laragon www → `public/` |
-| `npm run clean` | Remove compiled theme output (keeps WP Core) |
+> **Quan trọng:** `public/` bị `.gitignore` — nó được tạo tự động bởi `wp:download` và `build`.
 
 ---
 
-## Tiếng Việt (Vietnamese)
+## ⚡ Thiết Lập Nhanh
 
-Hệ thống phát triển WordPress Theme siêu tốc, tối ưu hóa cho phần mềm Laragon bằng cơ chế Symlink thông minh. Toàn bộ mã nguồn phát triển nằm trong thư mục `src/`.
+```bash
+# 1. Clone hoặc copy template
+git clone <repo-url> my-project
+cd my-project
 
-### Hướng dẫn Cài đặt
+# 2. Cài đặt dependencies
+npm install
 
-1. **Cài đặt thư viện**
-   ```bash
-   npm install
-   ```
+# 3. Tải WordPress
+npm run wp:download
 
-2. **Tải mã nguồn WordPress (Bản Tiếng Nhật)**
-   ```bash
-   npm run wp:download
-   ```
-   *※ Muốn tải phiên bản cụ thể:* `npm run wp:download -- --version=6.4.3`
+# 4. Tạo file .env
+cp .env.example .env
+# → Mở .env và sửa đường dẫn cho đúng máy bạn
 
-3. **Thiết lập biến môi trường (.env)**
-   Copy file `.env.example` và đổi tên thành `.env`:
-   ```bash
-   cp .env.example .env
-   ```
-   Mở file `.env` và thiết lập đường dẫn đến thư mục `www` của Laragon trên máy tính của bạn:
-   ```env
-   LARAGON_WWW=C:\laragon\www
-   ```
+# 5. Tạo symlink vào web server
+npm run link
 
-4. **Tạo Link Kết Nối với Laragon**
-   ```bash
-   npm run link
-   ```
-   Lệnh này sẽ tự động sinh ra một symlink tại đường dẫn cấu hình `LARAGON_WWW` trỏ trực tiếp về thư mục `public/` của dự án. Nếu thư mục hoặc link cũ đã tồn tại, công cụ sẽ tự động xoá bớt để tạo mới.
-   *(※ Bước này có thể yêu cầu bạn cấp quyền Administrator (Run As Admin) trên Windows)*
-
-5. **Bắt đầu Lập Trình**
-   ```bash
-   npm start
-   ```
-   Lệnh này thực hiện tự động theo dõi file trong `src/` để biên dịch SCSS ra CSS, chuyển đổi định dạng ảnh sang WebP, và đồng bộ mã nguồn PHP. Ngay lúc này BrowserSync sẽ chạy ở http://localhost:3000, trỏ thông qua proxy vào tên miền `http://[tên_dự_án].test` được sinh bởi Laragon.
-
-### Cấu trúc Thư mục
-```text
-[tên_dự_án]/
-├── src/                     ← MÃ NGUỒN BẠN VIẾT VÀO ĐÂY
-│   ├── *.php                ← Các file template (header, footer, functions...)
-│   └── assets/              ← Chứa tệp tĩnh SCSS, JS, Vendor, Images
-├── public/                  ← Lõi WordPress (Tự gen) + Mã nguồn bản build
-├── scripts/                 ← Các lệnh NodeJS bổ trợ cho build, tải WP
-├── .env                     ← File cấu hình đường dẫn nội bộ máy tính
-└── package.json
+# 6. Bắt đầu code!
+npm start
 ```
 
-### Tổng hợp các Lệnh
-| Lệnh | Ý nghĩa |
+> **Kết quả:** Trình duyệt mở `http://localhost:3000` → proxy tới `http://[project_name].test`
+
+---
+
+## 🖥 Cấu Hình Theo Hệ Điều Hành
+
+### Windows + Laragon (Khuyến nghị)
+
+**Bước 1: Cài đặt Laragon**
+- Tải [Laragon Full](https://laragon.org/download/) → cài đặt
+- Laragon tự tạo domain `.test` cho mỗi project trong `www/`
+
+**Bước 2: Cấu hình `.env`**
+```env
+SERVER_TYPE=laragon
+LARAGON_WWW=D:\laragon\www
+```
+> Nếu cài Laragon ở ổ khác, đổi `D:\laragon\www` cho đúng.
+
+**Bước 3: Chạy lệnh setup**
+```bash
+npm install
+npm run wp:download
+npm run link          # ← Sẽ hiện UAC popup, bấm "Yes"
+```
+
+**Bước 4: Cài WordPress**
+1. Mở Laragon → bấm **Start All**
+2. Mở browser → `http://[project_name].test`
+3. Tạo database trong **phpMyAdmin** (Laragon → Database)
+4. Làm theo wizard cài đặt WordPress
+
+**Bước 5: Phát triển**
+```bash
+npm start
+```
+
+---
+
+### Windows + XAMPP
+
+**Bước 1: Cài đặt XAMPP**
+- Tải [XAMPP](https://www.apachefriends.org/) → cài đặt
+- Document root mặc định: `C:\xampp\htdocs`
+
+**Bước 2: Cấu hình `.env`**
+```env
+SERVER_TYPE=xampp
+XAMPP_HTDOCS=C:\xampp\htdocs
+```
+
+**Bước 3: Chạy lệnh setup**
+```bash
+npm install
+npm run wp:download
+npm run link          # ← Cần quyền Admin
+```
+
+**Bước 4: Cài WordPress**
+1. Mở XAMPP Control Panel → Start **Apache** + **MySQL**
+2. Mở browser → `http://localhost/[project_name]`
+3. Tạo database trong phpMyAdmin (`http://localhost/phpmyadmin`)
+4. Hoàn thành wizard WordPress
+
+**Bước 5: Phát triển**
+```bash
+npm start
+# BrowserSync proxy → http://localhost/[project_name]
+```
+
+---
+
+### macOS + MAMP
+
+**Bước 1: Cài đặt**
+```bash
+# Cài Node.js qua Homebrew
+brew install node
+
+# Tải MAMP từ https://www.mamp.info/
+```
+
+**Bước 2: Cấu hình `.env`**
+```env
+SERVER_TYPE=laragon
+LARAGON_WWW=/Applications/MAMP/htdocs
+PROXY_URL=http://localhost:8888/[project_name]
+```
+> MAMP mặc định dùng port 8888. Đặt `PROXY_URL` vì không có auto `.test` domain.
+
+**Bước 3: Chạy lệnh setup**
+```bash
+npm install
+npm run wp:download
+npm run link
+```
+> macOS không cần quyền Admin cho symlink.
+
+**Bước 4: Cài WordPress**
+1. Mở MAMP → Start Servers
+2. Mở browser → `http://localhost:8888/[project_name]`
+3. Tạo database → cài WordPress
+
+**Bước 5: Phát triển**
+```bash
+npm start
+# BrowserSync proxy → http://localhost:8888/[project_name]
+```
+
+---
+
+### macOS + Laravel Valet
+
+**Bước 1: Cài đặt**
+```bash
+brew install php composer node
+composer global require laravel/valet
+valet install
+```
+
+**Bước 2: Cấu hình `.env`**
+```env
+SERVER_TYPE=laragon
+LARAGON_WWW=/Users/[username]/.valet/Sites
+PROXY_URL=http://[project_name].test
+```
+
+**Bước 3: Chạy lệnh setup**
+```bash
+npm install
+npm run wp:download
+npm run link
+
+# Đăng ký với Valet
+cd public && valet link [project_name] && cd ..
+```
+
+**Bước 4: Cài WordPress**
+```bash
+# Cài MySQL
+brew install mysql && brew services start mysql
+
+# Tạo database
+mysql -u root -e "CREATE DATABASE [project_name]"
+```
+Mở `http://[project_name].test` → hoàn thành wizard.
+
+**Bước 5: Phát triển**
+```bash
+npm start
+```
+
+---
+
+### Linux + Apache
+
+**Bước 1: Cài đặt**
+```bash
+# Ubuntu/Debian
+sudo apt update
+sudo apt install apache2 php php-mysql mysql-server nodejs npm
+
+# Bật mod_rewrite
+sudo a2enmod rewrite
+sudo systemctl restart apache2
+```
+
+**Bước 2: Cấu hình `.env`**
+```env
+SERVER_TYPE=laragon
+LARAGON_WWW=/var/www/html
+PROXY_URL=http://localhost/[project_name]
+```
+
+**Bước 3: Chạy lệnh setup**
+```bash
+npm install
+npm run wp:download
+npm run link
+```
+> Nếu `/var/www/html` cần quyền root: `sudo npm run link`
+
+**Bước 4: Cấu hình Apache cho WordPress**
+```bash
+# Cho phép .htaccess override
+sudo nano /etc/apache2/apache2.conf
+```
+Tìm block `<Directory /var/www/>` và đổi `AllowOverride None` → `AllowOverride All`:
+```apache
+<Directory /var/www/>
+    AllowOverride All
+</Directory>
+```
+```bash
+sudo systemctl restart apache2
+```
+
+**Bước 5: Cài WordPress**
+```bash
+sudo mysql -e "CREATE DATABASE [project_name]"
+sudo mysql -e "CREATE USER 'wpuser'@'localhost' IDENTIFIED BY 'password'"
+sudo mysql -e "GRANT ALL ON [project_name].* TO 'wpuser'@'localhost'"
+```
+Mở `http://localhost/[project_name]` → hoàn thành wizard.
+
+**Bước 6: Phát triển**
+```bash
+npm start
+```
+
+---
+
+## 💻 Hướng Dẫn Phát Triển
+
+### Quy trình code hàng ngày
+
+```bash
+# Mở terminal trong thư mục project
+npm start
+```
+
+Sau khi chạy `npm start`:
+- **BrowserSync** mở `http://localhost:3000`
+- **Watcher** theo dõi mọi file trong `src/`
+- Sửa file → **auto build** → **auto refresh** trình duyệt
+
+### Cách code từng loại file
+
+| Bạn sửa | Build system làm | Output |
+|---------|------------------|--------|
+| `src/*.php` | Copy sang output | `themes/[name]/*.php` |
+| `src/assets/scss/*.scss` | SCSS → PostCSS → Minify | `themes/[name]/assets/css/*.css` |
+| `src/assets/js/*.js` | Copy sang output | `themes/[name]/assets/js/*.js` |
+| `src/assets/images/*.jpg` | Convert sang WebP (quality 90) | `themes/[name]/assets/images/*.webp` |
+| `src/assets/images/*.svg` | Copy trực tiếp (không convert) | `themes/[name]/assets/images/*.svg` |
+| `src/assets/vendor/*` | Copy trực tiếp | `themes/[name]/assets/vendor/*` |
+
+### SCSS Architecture
+
+```
+scss/
+├── global/          ← Không output CSS, chỉ chứa variables/mixins
+│   ├── _color.scss
+│   ├── _font.scss
+│   ├── _mixin.scss
+│   └── _index.scss  ← @forward tất cả
+├── foundation/      ← Reset, base styles
+├── component/       ← Buttons, headers, footers...
+├── layout/          ← Container, grid
+├── page/            ← Page-specific styles
+├── utilities/       ← Utility classes (u_margin, u_padding...)
+├── common.scss      ← ✅ Entry file → common.css (tất cả trang)
+└── top.scss         ← ✅ Entry file → top.css (chỉ trang chủ)
+```
+
+**Quy tắc:**
+- File bắt đầu `_` (underscore) = **partial** → không tạo CSS riêng
+- File không có `_` = **entry file** → tạo CSS output riêng
+- Dùng `@use "../global" as *;` để import variables/mixins
+
+### Thêm CSS cho trang mới
+
+1. Tạo `src/assets/scss/page/about/_index.scss`
+2. Tạo `src/assets/scss/about.scss`:
+   ```scss
+   @use "global" as *;
+   @use "page/about";
+   ```
+3. Đăng ký trong `src/includes/styles-scripts-all.php`:
+   ```php
+   if(is_page('about')){
+       wp_enqueue_style('about-css', $themeUrl . '/assets/css/about.css', array(), filemtime($themeDir . '/assets/css/about.css'));
+   }
+   ```
+
+### Thêm JavaScript cho trang mới
+
+1. Tạo `src/assets/js/about.js`
+2. Đăng ký trong `src/includes/styles-scripts-all.php`:
+   ```php
+   if(is_page('about')){
+       wp_enqueue_script('about-js', $themeUrl . '/assets/js/about.js', array(), filemtime($themeDir . '/assets/js/about.js'), true);
+   }
+   ```
+
+### Thêm ảnh
+
+1. Đặt ảnh JPG/PNG vào `src/assets/images/`
+2. Build system tự convert sang **WebP** (chất lượng 90%)
+3. Trong PHP/SCSS, tham chiếu file `.webp`:
+   ```php
+   <img src="<?php echo get_template_directory_uri(); ?>/assets/images/hero.webp" alt="">
+   ```
+
+> **GIF, SVG, ICO** không được convert — copy trực tiếp.
+
+---
+
+## ⚙ Build System Chi Tiết
+
+### Tính năng
+
+| Feature | Chi tiết |
+|---------|----------|
+| **SCSS → CSS** | `sass-embedded` compile + PostCSS (autoprefixer + cssnano + sort media queries) |
+| **Images → WebP** | `sharp` convert JPG/PNG → WebP, quality 90% |
+| **File Copy** | PHP, JS, vendor, SVG, GIF → copy trực tiếp |
+| **Incremental Build** | Chỉ build file thay đổi (so sánh mtime) |
+| **Parallel Processing** | Images + SCSS compile song song (theo số CPU cores) |
+| **Source Map** | Tạo `.css.map` cho debug SCSS |
+| **Clean Stale** | Tự xoá file output khi xoá file source |
+| **BrowserSync** | CSS hot inject (không cần refresh), PHP/JS full reload |
+
+### Hiệu năng
+
+| Quy mô | Full build | Watch rebuild |
+|--------|-----------|---------------|
+| Nhỏ (~50 files) | < 1 giây | < 500ms |
+| Vừa (~200 files) | 5-10 giây | < 1 giây |
+| Lớn (~500+ ảnh) | 15-30 giây | < 1 giây |
+
+---
+
+## 📝 Lệnh CLI
+
+| Lệnh | Mô tả |
 |-------|-------|
-| `npm start` | Compile code và Watch toàn bộ file (PHP, SCSS, JS, Images) |
-| `npm run build` | Phiên bản build tĩnh nhanh gọn một lần (không watch) |
-| `npm run wp:download` | Chạy lệnh tải WP bản tiếng Nhật mới nhất (hoặc theo cú pháp lấy version) |
-| `npm run link` | Trích xuất Symlink vào thư mục web `www` của Laragon |
-| `npm run clean` | Xoá toàn bộ folder Theme đã build để lấy lại không gian sạch |
+| `npm start` | Chạy dev server (watch + BrowserSync) |
+| `npm run build` | Build production (1 lần, không watch) |
+| `npm run wp:download` | Tải WordPress JA mới nhất |
+| `npm run wp:download -- --version=6.4.3` | Tải WP phiên bản cụ thể |
+| `npm run link` | Tạo symlink vào web server |
+| `npm run link -- --www=/path/to/htdocs` | Symlink với đường dẫn tuỳ chỉnh |
+| `npm run clean` | Xoá theme build output (giữ WP core) |
+
+### Tham số tuỳ chỉnh
+
+```bash
+# Đổi proxy URL
+npm start -- --proxy=http://localhost:8080
+
+# Đổi thư mục web server
+npm run link -- --www=/var/www/html
+
+# Download WP phiên bản cũ
+npm run wp:download -- --version=6.5.2
+```
+
+---
+
+## 🚀 CI/CD Deploy Qua FTP
+
+### Tổng quan
+
+Khi push code lên `main`, GitHub Actions tự động:
+1. **Lần đầu**: Tải WP + Build theme → Upload toàn bộ lên FTP server
+2. **Lần sau**: Build theme → Upload **chỉ file thay đổi** trong theme
+
+### Bước 1: Tạo GitHub Secret
+
+Vào **GitHub → Organization (hoặc Repo) → Settings → Secrets → Actions → New Secret**
+
+| Secret Name | Value |
+|-------------|-------|
+| `SERVER_A_CONFIG` | `{"host":"ftp.example.com","user":"ftp_user","pass":"ftp_pass","ftp_dir":"./public_html","root_path":"/var/www/vhosts/example.com/public_html"}` |
+
+> **Giải thích:**
+> - `host`: Địa chỉ FTP server
+> - `user` / `pass`: Tài khoản FTP
+> - `ftp_dir`: Thư mục FTP root (relative)
+> - `root_path`: Đường dẫn tuyệt đối trên server (dùng cho `.htpasswd` AuthUserFile)
+>
+> Thêm server mới: tạo Secret `SERVER_B_CONFIG`, `SERVER_C_CONFIG`,...
+
+### Bước 2: Cấu hình `deploy-config.json`
+
+```json
+{
+  "server": "SERVER_A",
+  "project_dir": "ten_du_an",
+  "source_folder": "public",
+  "has_build_step": true,
+  "build_command": "npm run wp:download && npm run build",
+  "basic_auth": {
+    "username": "tester",
+    "password": "mat_khau_manh_456"
+  }
+}
+```
+
+| Trường | Ý nghĩa |
+|--------|---------|
+| `server` | Tên server (khớp với Secret: `SERVER_A` → `SERVER_A_CONFIG`) |
+| `project_dir` | Tên thư mục trên server (regex: `a-z 0-9 _ -` only) |
+| `source_folder` | Thư mục chứa build output (luôn là `public`) |
+| `has_build_step` | `true` = chạy build trước deploy |
+| `build_command` | Lệnh build (bao gồm `wp:download` + `build`) |
+| `basic_auth` | Username/password bảo vệ site test |
+
+### Bước 3: Push và Deploy
+
+```bash
+git add .
+git commit -m "Initial deploy"
+git push origin main
+```
+
+Theo dõi tại **GitHub → Actions** hoặc **VS Code → GitHub Actions extension**.
+
+### Bước 4: Sau Deploy Lần Đầu
+
+1. FTP vào server → copy `wp-config-sample.php` → `wp-config.php`
+2. Sửa `wp-config.php` với thông tin database:
+   ```php
+   define('DB_NAME', 'ten_database');
+   define('DB_USER', 'user_database');
+   define('DB_PASSWORD', 'mat_khau_database');
+   define('DB_HOST', 'localhost');
+   ```
+3. Tạo database MySQL trên hosting panel
+4. Mở browser → `https://domain.com/ten_du_an/` → hoàn thành cài đặt WordPress
+5. Đăng nhập WP Admin → Appearance → Themes → Kích hoạt theme
+
+### Bảo mật Deploy
+
+| Lớp | Bảo vệ |
+|-----|--------|
+| 🛡️ 1 | Path Traversal — chặn `../` trong `project_dir` |
+| 🛡️ 2 | Repo Lock — `.repo_lock` chống repo khác ghi đè nhầm |
+| 🛡️ 3 | Protected Files — `.htaccess`, `.htpasswd` không bị xoá |
+| 🛡️ 4 | FTP Retry — tự thử lại 3 lần khi mất kết nối |
+| 🛡️ 5 | `wp-config.php` — KHÔNG BAO GIỜ bị ghi đè |
+| 🛡️ 6 | `wp-content/uploads/` — KHÔNG BAO GIỜ bị xoá |
+| 🛡️ 7 | WP core — lần sau KHÔNG đụng tới |
+| 🛡️ 8 | Delete scope — chỉ xoá file trong `themes/[name]/` |
+
+---
+
+## ❓ FAQ & Xử Lý Lỗi
+
+### `npm run link` báo lỗi quyền (Windows)
+
+Bấm **Yes** khi UAC popup hiện ra. Nếu không thấy popup:
+```bash
+# Chạy PowerShell as Administrator
+npm run link
+```
+
+### `npm start` báo proxy lỗi
+
+Kiểm tra:
+1. Web server (Laragon/XAMPP) đã **Start** chưa?
+2. File `.env` có đường dẫn `LARAGON_WWW` đúng không?
+3. Đã chạy `npm run link` chưa?
+4. Thử đặt proxy thủ công:
+   ```bash
+   npm start -- --proxy=http://localhost/[project_name]
+   ```
+
+### SCSS compile lỗi
+
+```bash
+# Kiểm tra SCSS syntax
+npm run build
+# → Lỗi sẽ hiển thị tên file và dòng lỗi
+```
+
+### Ảnh không convert sang WebP
+
+- Chỉ **JPG** và **PNG** được convert → WebP
+- **GIF**, **SVG**, **ICO** → copy trực tiếp, không convert
+- Kiểm tra file nằm trong `src/assets/images/` (không phải `src/assets/vendor/`)
+
+### Deploy lỗi 429 (WordPress download)
+
+WordPress.org rate-limit GitHub Actions runners. Script tự retry 3 lần. Nếu vẫn lỗi:
+- Chờ 5-10 phút rồi re-run workflow
+- Lần chạy tiếp sẽ dùng cache (không cần tải lại)
+
+### Deploy lỗi "CẢNH BÁO BẢO MẬT"
+
+Thư mục `project_dir` trên server đã thuộc về repo khác. Kiểm tra:
+1. `project_dir` trong `deploy-config.json` có đúng không?
+2. Nếu chuyển repo: xoá file `.repo_lock` trên FTP server
+
+### Muốn thay đổi tên theme
+
+Tên theme = **tên thư mục project**. Khi clone template:
+```bash
+git clone <repo-url> my-new-theme
+cd my-new-theme
+# → Theme name tự động = "my-new-theme"
+# → Output: public/wp-content/themes/my-new-theme/
+```
+
+---
+
+## 📄 License
+
+ISC
