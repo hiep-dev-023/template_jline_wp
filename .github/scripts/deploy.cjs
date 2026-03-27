@@ -345,6 +345,7 @@ async function runDeploy() {
         const hashedPass = crypt(config.basic_auth.password);
         fs.writeFileSync('/tmp/.htpasswd', `${config.basic_auth.username}:${hashedPass}`);
         if (!isFirstDeploy) {
+            await client.cd(ftpRoot);
             await client.uploadFrom('/tmp/.htpasswd', `${targetDir}/.htpasswd`);
         }
 
