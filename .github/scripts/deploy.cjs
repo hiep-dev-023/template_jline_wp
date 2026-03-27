@@ -3,6 +3,7 @@ const path = require('path');
 const ftp = require('basic-ftp');
 const { execSync } = require('child_process');
 const crypt = require('apache-crypt');
+const crypto = require('crypto');
 
 // ─────────────────────────────────────────────
 // Utilities
@@ -394,7 +395,72 @@ async function runDeploy() {
             // 2. Upload .htpasswd (đã tạo ở trên)
             await client.uploadFrom('/tmp/.htpasswd', `${targetDir}/.htpasswd`);
 
-            // 3. Tạo .htaccess (WordPress rewrite + Basic Auth)
+            // 3. Upload WP + Theme
+            const siteUrl = serverInfo.site_url || `https://${serverInfo.host}`;
+            console.log(`🌐 Site URL: ${siteUrl}`);
+            {
+                // === CHẾ ĐỘ NHANH: Zip + Extract ===
+                console.log('🚀 Chế độ nhanh: Zip + Extract trên server...');
+
+                // 3a. Zip public/
+                console.log('📦 Đang nén thư mục...');
+                execSync(`cd ${config.source_folder} && zip -r /tmp/_deploy.zip . -x ".*"`, { stdio: 'pipe' });
+                const zipSize = (fs.statSync('/tmp/_deploy.zip').size / 1024 / 1024).toFixed(1);
+                console.log(`   📦 File zip: ${zipSize}MB`);
+
+                // 3b. Upload zip
+                console.log('⬆️ Upload zip lên server...');
+                await client.uploadFrom('/tmp/_deploy.zip', `${targetDir}/_deploy.zip`);
+                console.log('   ✅ Upload zip hoàn tất!');
+
+                // 3c. Tạo PHP extract script với secret token
+                const token = crypto.randomBytes(32).toString('hex');
+                const extractPhp = [
+                    '<?php',
+                    `if (($_GET["t"] ?? "") !== "${token}") { http_response_code(403); die("Forbidden"); }`,
+                    '$zip = new ZipArchive;',
+                    'if ($zip->open("_deploy.zip") === TRUE) {',
+                    '    $zip->extractTo("./");',
+                    '    $zip->close();',
+                    '    @unlink("_deploy.zip");',
+                    '    @unlink(__FILE__);',
+                    '    echo "OK";',
+                    '} else {',
+                    '    echo "FAIL";',
+                    '}',
+                ].join('\n');
+                fs.writeFileSync('/tmp/_extract.php', extractPhp);
+                await client.uploadFrom('/tmp/_extract.php', `${targetDir}/_extract.php`);
+
+                // 3d. Gọi HTTP để extract
+                const extractUrl = `${siteUrl.replace(/\/$/, '')}/${config.project_dir}/_extract.php?t=${token}`;
+                console.log(`🔧 Gọi extract: ${siteUrl}/${config.project_dir}/_extract.php`);
+
+                const https = require(extractUrl.startsWith('https') ? 'https' : 'http');
+                const extractResult = await new Promise((resolve, reject) => {
+                    const req = https.get(extractUrl, { timeout: 120000 }, (res) => {
+                        let data = '';
+                        res.on('data', chunk => data += chunk);
+                        res.on('end', () => resolve({ status: res.statusCode, body: data.trim() }));
+                    });
+                    req.on('error', reject);
+                    req.on('timeout', () => { req.destroy(); reject(new Error('Timeout')); });
+                });
+
+                if (extractResult.body === 'OK') {
+                    console.log('✅ Extract thành công! (zip + script đã tự xóa)');
+                } else {
+                    console.error(`⚠️ Extract trả về: ${extractResult.status} - ${extractResult.body}`);
+                    console.log('↩️ Fallback: Upload từng file...');
+                    // Xóa zip + script trên server
+                    try { await client.remove(`${targetDir}/_deploy.zip`); } catch {}
+                    try { await client.remove(`${targetDir}/_extract.php`); } catch {}
+                    // Fallback
+                    await uploadDirectory(client, config.source_folder, targetDir, ftpRoot);
+                }
+            }
+
+            // 4. Tạo .htaccess (WordPress rewrite + Basic Auth)
             console.log('🔐 Tạo .htaccess (WordPress + Basic Auth)...');
             const htaccessContent = [
                 '# === Bảo vệ file ẩn ===',
@@ -420,10 +486,6 @@ async function runDeploy() {
             ].join('\n');
             fs.writeFileSync('/tmp/.htaccess', htaccessContent);
             await client.uploadFrom('/tmp/.htaccess', `${targetDir}/.htaccess`);
-
-            // 4. Upload toàn bộ public/ (WP core + theme)
-            console.log(`📤 Upload toàn bộ ${config.source_folder}/ (WP core + Theme)...`);
-            await uploadDirectory(client, config.source_folder, targetDir, ftpRoot);
 
             console.log('');
             console.log('✅ Hoàn thành Deploy lần đầu!');
