@@ -1,5 +1,5 @@
 {
-  "server": "SERVER_A",
+  "server": "JLINE_WEB_CONFIG",
   "project_dir": "template_jline_wp",
   "source_folder": "public",
   "has_build_step": true,
