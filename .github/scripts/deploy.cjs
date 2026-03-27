@@ -276,6 +276,10 @@ async function runDeploy() {
     }
 
     // ─── Kiểm tra source folder ───
+    if (config.source_folder.includes('..')) {
+        console.error(`❌ LỖI NGHIÊM TRỌNG: Thư mục source "${config.source_folder}" KHÔNG HỢP LỆ (chứa ..)!`);
+        process.exit(1);
+    }
     if (!fs.existsSync(config.source_folder)) {
         console.error(`❌ LỖI: Thư mục source "${config.source_folder}" không tồn tại!`);
         process.exit(1);
@@ -433,7 +437,7 @@ async function runDeploy() {
             console.log(`🔧 Gọi extract: ${siteUrl}/${config.project_dir}/_extract.php`);
 
             // 3e. Gọi HTTP để giải nén (hỗ trợ redirect http→https)
-            function httpGet(url, maxRedirects = 3) {
+            function httpGet(url, maxRedirects = 5) {
                 return new Promise((resolve, reject) => {
                     const mod = require(url.startsWith('https') ? 'https' : 'http');
                     const req = mod.get(url, { timeout: 120000, rejectUnauthorized: false }, (res) => {
@@ -468,8 +472,8 @@ async function runDeploy() {
             // 4. Tạo .htaccess (WordPress rewrite + Basic Auth)
             console.log('🔐 Tạo .htaccess (WordPress + Basic Auth)...');
             const htaccessContent = [
-                '# === Bảo vệ file ẩn ===',
-                '<Files ~ "^\\.\\(htaccess|htpasswd\\)$">',
+                '# === Bảo vệ tất cả file ẩn (bắt đầu bằng dấu chấm) ===',
+                '<Files ~ "^\\.">',
                 'Deny from all',
                 '</Files>',
                 '',
