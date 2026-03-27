@@ -443,11 +443,15 @@ async function runDeploy() {
             const extractUrl = `${siteUrl.replace(/\/$/, '')}/${config.project_dir}/_extract.php?t=${token}`;
             console.log(`🔧 Gọi extract: ${siteUrl}/${config.project_dir}/_extract.php`);
 
-            // 3e. Gọi HTTP để giải nén
-            const httpModule = require(extractUrl.startsWith('https') ? 'https' : 'http');
-            try {
-                const extractResult = await new Promise((resolve, reject) => {
-                    const req = httpModule.get(extractUrl, { timeout: 120000, rejectUnauthorized: false }, (res) => {
+            // 3e. Gọi HTTP để giải nén (hỗ trợ redirect http→https)
+            function httpGet(url, maxRedirects = 3) {
+                return new Promise((resolve, reject) => {
+                    const mod = require(url.startsWith('https') ? 'https' : 'http');
+                    const req = mod.get(url, { timeout: 120000, rejectUnauthorized: false }, (res) => {
+                        if ([301, 302, 307, 308].includes(res.statusCode) && res.headers.location && maxRedirects > 0) {
+                            console.log(`   ↪️ Redirect → ${res.headers.location.split('?')[0]}`);
+                            return httpGet(res.headers.location, maxRedirects - 1).then(resolve).catch(reject);
+                        }
                         let data = '';
                         res.on('data', chunk => data += chunk);
                         res.on('end', () => resolve({ status: res.statusCode, body: data.trim() }));
@@ -455,6 +459,9 @@ async function runDeploy() {
                     req.on('error', reject);
                     req.on('timeout', () => { req.destroy(); reject(new Error('Timeout (120s)')); });
                 });
+            }
+            try {
+                const extractResult = await httpGet(extractUrl);
 
                 if (extractResult.body === 'OK') {
                     console.log('✅ Giải nén thành công! (zip + script đã tự xóa)');
