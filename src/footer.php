@@ -1,6 +1,6 @@
         <footer class="c-footer">
             <div class="l-container">
-                footer
+                footer 123
                 <p class="c-footer__copy">© <?php echo date('Y'); ?></p>
             </div>
             <a href="#wrapper" class="c-totop">totop</a>
