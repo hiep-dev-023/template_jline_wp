@@ -424,16 +424,12 @@ async function runDeploy() {
             fs.writeFileSync('/tmp/_extract.php', extractPhp);
             await client.uploadFrom('/tmp/_extract.php', `${targetDir}/_extract.php`);
 
-            // 3d. Tính URL từ root_path (tự động, không cần cấu hình thêm)
-            let siteUrl = serverInfo.site_url || '';
-            if (!siteUrl) {
-                // Trích đường dẫn web từ root_path (phần sau public_html)
-                const rootPath = serverInfo.root_path || '';
-                const pubIdx = rootPath.indexOf('public_html');
-                const webPath = pubIdx >= 0 ? rootPath.substring(pubIdx + 'public_html'.length) : '';
-                siteUrl = `https://${serverInfo.host}${webPath}`;
-            }
-            const extractUrl = `${siteUrl.replace(/\/$/, '')}/${config.project_dir}/_extract.php?t=${token}`;
+            // 3d. Tính URL từ host + root_path (host có thể là IP hoặc domain)
+            const rootPath = serverInfo.root_path || '';
+            const pubIdx = rootPath.indexOf('public_html');
+            const webPath = pubIdx >= 0 ? rootPath.substring(pubIdx + 'public_html'.length) : '';
+            const siteUrl = `http://${serverInfo.host}${webPath}`;
+            const extractUrl = `${siteUrl}/${config.project_dir}/_extract.php?t=${token}`;
             console.log(`🔧 Gọi extract: ${siteUrl}/${config.project_dir}/_extract.php`);
 
             // 3e. Gọi HTTP để giải nén (hỗ trợ redirect http→https)
