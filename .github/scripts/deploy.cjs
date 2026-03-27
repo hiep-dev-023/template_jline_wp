@@ -339,6 +339,16 @@ async function runDeploy() {
         }
 
         // ════════════════════════════════════════
+        // LUÔN CẬP NHẬT: .htpasswd (mỗi lần deploy)
+        // ════════════════════════════════════════
+        console.log('🔐 Cập nhật .htpasswd...');
+        const hashedPass = crypt(config.basic_auth.password);
+        fs.writeFileSync('/tmp/.htpasswd', `${config.basic_auth.username}:${hashedPass}`);
+        if (!isFirstDeploy) {
+            await client.uploadFrom('/tmp/.htpasswd', `${targetDir}/.htpasswd`);
+        }
+
+        // ════════════════════════════════════════
         // CHẾ ĐỘ 1: DEPLOY LẦN ĐẦU TIÊN
         // Upload toàn bộ WP core + theme
         // ════════════════════════════════════════
@@ -354,17 +364,14 @@ async function runDeploy() {
             fs.writeFileSync('/tmp/.repo_lock', process.env.GITHUB_REPO);
             await client.uploadFrom('/tmp/.repo_lock', `${targetDir}/.repo_lock`);
 
-            // 2. Tạo .htpasswd
-            console.log('🔐 Tạo .htpasswd...');
-            const hashedPass = crypt(config.basic_auth.password);
-            fs.writeFileSync('/tmp/.htpasswd', `${config.basic_auth.username}:${hashedPass}`);
+            // 2. Upload .htpasswd (đã tạo ở trên)
             await client.uploadFrom('/tmp/.htpasswd', `${targetDir}/.htpasswd`);
 
             // 3. Tạo .htaccess (WordPress rewrite + Basic Auth)
             console.log('🔐 Tạo .htaccess (WordPress + Basic Auth)...');
             const htaccessContent = [
                 '# === Bảo vệ file ẩn ===',
-                '<Files ~ "^\\.(htaccess|htpasswd)$">',
+                '<Files ~ "^\\.\\(htaccess|htpasswd\\)$">',
                 'Deny from all',
                 '</Files>',
                 '',
